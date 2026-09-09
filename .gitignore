@@ -30,3 +30,7 @@ phpstan.neon
 testbench.yaml
 /docs
 /coverage
+
+node_modules/
+!resources/dist/
+!resources/dist/*

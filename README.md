@@ -1,103 +1,152 @@
-# :package_description
+# Laravel Cookie Consent
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/:vendor_slug/:package_slug.svg?style=flat-square)](https://packagist.org/packages/:vendor_slug/:package_slug)
-[![GitHub Tests Action Status](https://github.com/spatie/package-skeleton-laravel/actions/workflows/run-tests.yml/badge.svg)](https://github.com/:vendor_slug/:package_slug/actions?query=workflow%3Arun-tests+branch%3Amain)
-[![GitHub Code Style Action Status](https://github.com/spatie/package-skeleton-laravel/actions/workflows/fix-php-code-style-issues.yml/badge.svg)](https://github.com/:vendor_slug/:package_slug/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
-[![Total Downloads](https://img.shields.io/packagist/dt/:vendor_slug/:package_slug.svg?style=flat-square)](https://packagist.org/packages/:vendor_slug/:package_slug)
-<!--delete-->
----
-This repo can be used to scaffold a Laravel package. Follow these steps to get started:
+Cookiebot-style consent manager for Laravel: a consent banner with per-category
+preferences, server-side and runtime script blocking, Google Consent Mode v2,
+consent logging and an auto-generated cookie declaration. No frontend framework
+required — the runtime is a ~12 KB vanilla IIFE inlined in `<head>` so it runs
+before any tracker.
 
-1. Press the "Use this template" button at the top of this repo to create a new repo with the contents of this skeleton.
-2. Run "php ./configure.php" to run a script that will replace all placeholders throughout all the files.
-
-   To run it unattended — from a script, or by handing it to a coding agent — pass `--no-interaction`
-   (`-n`) and the answers as options. It never prompts, and exits non-zero with a message naming any
-   option it still needs:
-
-   ```bash
-   php ./configure.php -n --vendor-name="Spatie" --package-name="laravel-ray"
-   ```
-
-   Run "php ./configure.php --help" for the full list of options.
-3. Have fun creating your package.
-4. If you need help creating a package, consider picking up our <a href="https://laravelpackage.training">Laravel Package Training</a> video course.
----
-<!--/delete-->
-This is where your description should go. Limit it to a paragraph or two. Consider adding a small example.
-
-## Support us
-
-[<img src="https://github-ads.s3.eu-central-1.amazonaws.com/:package_name.jpg?t=1" width="419px" />](https://spatie.be/github-ad-click/:package_name)
-
-We invest a lot of resources into creating [best in class open source packages](https://spatie.be/open-source). You can support us by [buying one of our paid products](https://spatie.be/open-source/support-us).
-
-We highly appreciate you sending us a postcard from your hometown, mentioning which of our package(s) you are using. You'll find our address on [our contact page](https://spatie.be/about-us). We publish all received postcards on [our virtual postcard wall](https://spatie.be/open-source/postcards).
+Works with full-page cached sites: consent lives client-side (cookie +
+localStorage), the HTML never varies per visitor.
 
 ## Installation
 
-You can install the package via composer:
-
 ```bash
-composer require :vendor_slug/:package_slug
-```
-
-You can publish and run the migrations with:
-
-```bash
-php artisan vendor:publish --tag=":package_slug-migrations"
+composer require deinte/laravel-cookie-consent
+php artisan vendor:publish --tag="cookie-consent-migrations"
 php artisan migrate
+php artisan vendor:publish --tag="cookie-consent-config"
 ```
 
-You can publish the config file with:
-
-```bash
-php artisan vendor:publish --tag=":package_slug-config"
-```
-
-This is the contents of the published config file:
-
-```php
-return [
-];
-```
-
-Optionally, you can publish the views using
-
-```bash
-php artisan vendor:publish --tag=":package_slug-views"
-```
+Optional: publish views (`cookie-consent-views`) or translations (`cookie-consent-translations`).
 
 ## Usage
 
-```php
-$:variable = new VendorName\Skeleton();
-echo $:variable->echoPhrase('Hello, VendorName!');
+### 1. Layout
+
+```blade
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <x-cookie-consent::head />   {{-- as early as possible, before any tracker --}}
+    ...
+</head>
+<body>
+    <x-cookie-consent::body />
+    ...
+    <footer>
+        <x-cookie-consent::settings-link class="footer-link" />
+    </footer>
+</body>
 ```
 
-## Testing
+`<x-cookie-consent::head />` emits the runtime config, critical CSS, the runtime
+script, the banner template and every managed `head` script as
+`<script type="text/plain" data-cookieconsent="…">`. Scripts in the `necessary`
+category render as regular executable scripts.
+
+### 2. Register scripts
+
+From the database (`consent_scripts` table, see `ConsentScript`) or at runtime:
+
+```php
+use Deinte\CookieConsent\Facades\CookieConsent;
+use Deinte\CookieConsent\Data\ScriptDefinition;
+use Deinte\CookieConsent\Enums\ConsentCategory;
+
+CookieConsent::registerScript(CookieConsent::googleAnalytics('G-XXXX'));
+CookieConsent::registerScript(CookieConsent::googleTagManager('GTM-XXXX'));
+CookieConsent::registerScript(fn () => ScriptDefinition::external(
+    'Hotjar',
+    'https://static.hotjar.com/c/hotjar-123.js',
+    ConsentCategory::Statistics,
+));
+```
+
+Wrap a one-off script in a view:
+
+```blade
+<x-cookie-consent::script category="marketing" src="https://connect.facebook.net/en_US/fbevents.js" async />
+<x-cookie-consent::script category="statistics">window.myTracker.init();</x-cookie-consent::script>
+```
+
+Rewrite free-form HTML (user-provided snippets, rich text with embeds):
+
+```blade
+{!! CookieConsent::blockHtml($settings->custom_head_scripts, ConsentCategory::Marketing) !!}
+```
+
+### 3. Consent log endpoint
+
+```php
+// routes/web.php (inside the middleware group you want)
+CookieConsent::routes();
+```
+
+Registers `POST /cookie-consent/log` (throttled, CSRF exempt). Records land in
+`consent_logs` with a hashed IP. Prune with `php artisan cookie-consent:prune-logs`.
+
+### 4. Cookie declaration
+
+```blade
+<x-cookie-consent::declaration />
+```
+
+Renders a table per category from the cookies attached to each script.
+
+## Browser API
+
+```js
+window.CookieConsent.show();            // open preferences
+window.CookieConsent.acceptAll();
+window.CookieConsent.rejectAll();
+window.CookieConsent.accept(['statistics']);
+window.CookieConsent.hasConsent('marketing');
+window.CookieConsent.getConsent();      // { id, v, h, ts, c: {...} } | null
+window.CookieConsent.onReady(consent => {});
+```
+
+Events on `document`: `cookieconsent:ready`, `cookieconsent:changed`,
+`cookieconsent:accept:<category>`. Any element with
+`data-cookieconsent="show"` opens the preferences modal.
+
+Google Consent Mode v2: defaults are pushed as `denied` before any Google tag
+loads, `update` follows each decision and a `cookie_consent_update` dataLayer
+event (`cc_statistics`, `cc_marketing`, …) is available as a GTM trigger.
+
+## Customising
+
+Bind your own implementations through `config/cookie-consent.php`:
+
+| Contract | Purpose |
+|---|---|
+| `SettingsResolver` | Where banner settings come from (config, DB, tenant settings) |
+| `ScriptRepository` | Where managed scripts come from |
+| `TextProvider` | Banner copy per locale |
+
+Theme the banner through CSS variables (`--cc-primary`, `--cc-bg`, `--cc-fg`,
+`--cc-radius`, …) via the `banner.theme` setting or your own stylesheet.
+
+## Auto-blocking: what it can and cannot do
+
+The runtime hooks `document.createElement` and watches the DOM with a
+`MutationObserver`, so scripts, iframes and beacons injected at runtime (e.g. by
+GTM) are neutralised when their domain matches a rule. Limits:
+
+- Inline scripts already parsed before the observer runs cannot be stopped —
+  rewrite server-side with `blockHtml()` or `<x-cookie-consent::script>`.
+- A parser-inserted `<script src>` may already be fetched by the preload scanner;
+  execution is prevented, the request is not.
+- `import()`, `fetch`, workers and CSS `url()` are out of scope.
+- Unknown domains pass through unless `blocker.block_unknown` is enabled.
+
+## Development
 
 ```bash
-composer test
+composer test && composer analyse && composer format
+npm install && npm test && npm run build   # rebuild resources/dist
 ```
-
-## Changelog
-
-Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
-
-## Contributing
-
-Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
-
-## Security Vulnerabilities
-
-Please review [our security policy](../../security/policy) on how to report security vulnerabilities.
-
-## Credits
-
-- [:author_name](https://github.com/:author_username)
-- [All Contributors](../../contributors)
 
 ## License
 
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+MIT. See [LICENSE.md](LICENSE.md).
