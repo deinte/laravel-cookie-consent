@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Deinte\CookieConsent\Tests;
 
+use Deinte\CookieConsent\Contracts\TextProvider;
 use Deinte\CookieConsent\Data\ScriptDefinition;
 use Deinte\CookieConsent\Enums\ConsentCategory;
 use Deinte\CookieConsent\Enums\ScriptPosition;
@@ -29,6 +30,7 @@ class CookieConsentManagerTest extends TestCase
         $this->assertSame('Noodzakelijk', $config['categories'][0]['label']);
         $this->assertSame('Alles accepteren', $config['texts']['accept_all']);
         $this->assertArrayNotHasKey('categories', $config['texts']);
+        $this->assertArrayNotHasKey('declaration', $config['texts']);
         $this->assertNotEmpty($config['rules']);
         $this->assertNull($config['logEndpoint']);
     }
@@ -38,6 +40,63 @@ class CookieConsentManagerTest extends TestCase
         CookieConsent::routes();
 
         $this->assertSame('/cookie-consent/log', CookieConsent::config()['logEndpoint']);
+    }
+
+    public function test_configured_log_endpoint_overrides_the_route(): void
+    {
+        CookieConsent::routes();
+        config()->set('cookie-consent.logging.endpoint', '/proxy/cookie-consent/log');
+        CookieConsent::refresh();
+
+        $this->assertSame('/proxy/cookie-consent/log', CookieConsent::config()['logEndpoint']);
+    }
+
+    public function test_texts_keep_nested_custom_groups(): void
+    {
+        $this->app->bind(TextProvider::class, fn (): TextProvider => new class implements TextProvider
+        {
+            public function texts(string $locale): array
+            {
+                return [
+                    'title' => 'x',
+                    'extra' => ['a' => 'b'],
+                    'categories' => ['necessary' => ['label' => 'Necessary']],
+                    'declaration' => ['name' => 'Name'],
+                ];
+            }
+        });
+
+        $texts = CookieConsent::config()['texts'];
+
+        $this->assertSame('x', $texts['title']);
+        $this->assertSame(['a' => 'b'], $texts['extra']);
+        $this->assertArrayNotHasKey('categories', $texts);
+        $this->assertArrayNotHasKey('declaration', $texts);
+    }
+
+    public function test_scripts_sort_order_accepts_negative_values(): void
+    {
+        ConsentScript::query()->create([
+            'name' => 'Zero',
+            'category' => ConsentCategory::Statistics,
+            'position' => ScriptPosition::Head,
+            'kind' => 'inline',
+            'code' => 'zero()',
+            'sort_order' => 0,
+        ]);
+        ConsentScript::query()->create([
+            'name' => 'First',
+            'category' => ConsentCategory::Statistics,
+            'position' => ScriptPosition::Head,
+            'kind' => 'inline',
+            'code' => 'first()',
+            'sort_order' => -5,
+        ]);
+
+        $this->assertSame(-5, ConsentScript::query()->where('name', 'First')->value('sort_order'));
+
+        $names = CookieConsent::scripts()->map(fn (ScriptDefinition $script): string => $script->name)->all();
+        $this->assertSame(['First', 'Zero'], $names);
     }
 
     public function test_policy_hash_is_stable_until_version_or_scripts_change(): void

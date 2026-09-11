@@ -2,6 +2,23 @@
 
 All notable changes to `laravel-cookie-consent` will be documented in this file.
 
+## v0.0.2 - 2026-09-11
+
+- `consent_scripts.sort_order` is a signed `integer` instead of `unsignedInteger`,
+  so the negative sort orders used by `googleAnalytics()` (`-100`) and
+  `googleTagManager()` (`-90`) persist and keep those scripts rendering first.
+- New `logging.endpoint` config key: an explicit URL the runtime posts decisions
+  to, for hosts that expose the log route under another URL (e.g. behind a proxy
+  prefix). `null` keeps deriving it from the named route.
+- `script_delivery => 'asset'` now links the published stylesheet as
+  `<link rel="stylesheet" id="cc-css">` instead of always inlining the CSS;
+  `inline` is unchanged.
+- A stored "reject all" decision now pushes an explicit Consent Mode `update`
+  (everything denied) and the `cookie_consent_update` dataLayer event on load,
+  instead of relying on the denied defaults.
+- `config()` no longer drops array-valued texts: every text passes through except
+  the `categories` and `declaration` groups.
+
 ## v0.0.1 - 2026-09-11
 
 Initial release.

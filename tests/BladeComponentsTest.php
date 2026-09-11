@@ -37,6 +37,27 @@ class BladeComponentsTest extends TestCase
         $this->assertStringContainsString('Alles accepteren', $html);
     }
 
+    public function test_head_component_links_the_published_stylesheet_with_asset_delivery(): void
+    {
+        config()->set('cookie-consent.script_delivery', 'asset');
+
+        $html = Blade::render('<x-cookie-consent::head />');
+
+        $this->assertStringContainsString('<link rel="stylesheet" href="'.asset('vendor/cookie-consent/cookie-consent.min.css').'" id="cc-css">', $html);
+        $this->assertStringNotContainsString('<style id="cc-css">', $html);
+        $this->assertStringContainsString('<script src="'.asset('vendor/cookie-consent/cookie-consent.min.js').'" id="cc-runtime">', $html);
+    }
+
+    public function test_head_component_inlines_the_stylesheet_with_inline_delivery(): void
+    {
+        config()->set('cookie-consent.script_delivery', 'inline');
+
+        $html = Blade::render('<x-cookie-consent::head />');
+
+        $this->assertStringContainsString('<style id="cc-css">', $html);
+        $this->assertStringNotContainsString('<link rel="stylesheet"', $html);
+    }
+
     public function test_head_component_renders_plain_scripts_when_disabled(): void
     {
         config()->set('cookie-consent.enabled', false);

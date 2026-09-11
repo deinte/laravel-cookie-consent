@@ -1,7 +1,9 @@
 @if($enabled)
 <script{{ $nonce ? ' nonce="'.$nonce.'"' : '' }} id="cc-config">window.CookieConsentConfig={!! json_encode($config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES) !!};</script>
-@if($styles !== '')
+@if($styles !== null && $styles !== '')
 <style id="cc-css">{!! $styles !!}</style>
+@elseif($stylesUrl !== null)
+<link rel="stylesheet" href="{{ $stylesUrl }}" id="cc-css">
 @endif
 @if($runtime !== null && $runtime !== '')
 <script{{ $nonce ? ' nonce="'.$nonce.'"' : '' }} id="cc-runtime">{!! $runtime !!}</script>

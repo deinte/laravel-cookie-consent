@@ -30,6 +30,29 @@ describe('consent mode', () => {
         expect(window.dataLayer[2]).toMatchObject({ event: 'cookie_consent_update', cc_statistics: true, cc_marketing: false });
     });
 
+    it('explicitly updates for a stored reject-all decision', () => {
+        initConsentMode(baseConfig(), ['necessary']);
+
+        expect(window.dataLayer.length).toBe(3);
+        expect(window.dataLayer[1][1]).toBe('update');
+        expect(window.dataLayer[1][2]).toEqual({
+            ad_storage: 'denied',
+            ad_user_data: 'denied',
+            ad_personalization: 'denied',
+            analytics_storage: 'denied',
+            functionality_storage: 'denied',
+            personalization_storage: 'denied',
+            security_storage: 'granted',
+        });
+        expect(window.dataLayer[2]).toMatchObject({
+            event: 'cookie_consent_update',
+            cc_necessary: true,
+            cc_preferences: false,
+            cc_statistics: false,
+            cc_marketing: false,
+        });
+    });
+
     it('maps categories to the v2 signals', () => {
         expect(consentModePayload(['necessary', 'marketing', 'preferences'])).toEqual({
             ad_storage: 'granted',

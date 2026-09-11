@@ -9,6 +9,7 @@ final readonly class ConsentSettings
     /**
      * @param  array<string, string>  $theme  CSS custom properties applied to the banner root (e.g. `--cc-primary`).
      * @param  array<int, array{pattern: string, category: string}>  $rules  Domain patterns the auto-blocker classifies.
+     * @param  ?string  $logEndpoint  Explicit URL the runtime posts decisions to; `null` derives it from the named log route.
      */
     public function __construct(
         public bool $enabled = true,

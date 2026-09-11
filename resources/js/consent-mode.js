@@ -35,6 +35,11 @@ export function dataLayerEvent(granted) {
     };
 }
 
+/**
+ * `granted` is the stored decision (at least `['necessary']`), or null when the
+ * visitor has not decided yet. A stored decision always pushes an explicit
+ * update, so a "reject all" is signalled as denied rather than left implicit.
+ */
 export function initConsentMode(config, granted) {
     if (!config.consentMode) {
         return;
@@ -47,7 +52,7 @@ export function initConsentMode(config, granted) {
 
     window.gtag('consent', 'default', defaults);
 
-    if (granted && granted.length > 1) {
+    if (granted && granted.length > 0) {
         window.gtag('consent', 'update', consentModePayload(granted));
         window.dataLayer.push(dataLayerEvent(granted));
     }

@@ -18,6 +18,7 @@ use Deinte\CookieConsent\Support\HtmlBlocker;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Routing\Router;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\HtmlString;
@@ -126,7 +127,7 @@ class CookieConsent
             'policyHash' => $this->policyHash($locale),
             'locale' => $locale ?? app()->getLocale(),
             'policyUrl' => $settings->policyUrl,
-            'logEndpoint' => $settings->logEnabled ? $this->logEndpoint() : null,
+            'logEndpoint' => $settings->logEnabled ? ($settings->logEndpoint ?? $this->logEndpoint()) : null,
             'consentMode' => $settings->consentMode,
             'blockUnknown' => $settings->blockUnknown,
             'reloadOnRevoke' => $settings->reloadOnRevoke,
@@ -140,7 +141,7 @@ class CookieConsent
             'position' => $settings->position,
             'theme' => $settings->theme,
             'categories' => $categories,
-            'texts' => array_filter($texts, fn (mixed $value): bool => ! is_array($value)),
+            'texts' => Arr::except($texts, ['categories', 'declaration']),
             'rules' => array_values($settings->rules),
         ];
     }

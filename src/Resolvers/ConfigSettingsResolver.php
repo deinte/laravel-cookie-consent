@@ -22,7 +22,7 @@ class ConfigSettingsResolver implements SettingsResolver
             policyVersion: (string) ($config['policy']['version'] ?? '1'),
             consentMode: (bool) ($config['google_consent_mode'] ?? true),
             logEnabled: (bool) ($config['logging']['enabled'] ?? true),
-            logEndpoint: null,
+            logEndpoint: $config['logging']['endpoint'] ?? null,
             blockUnknown: (bool) ($config['blocker']['block_unknown'] ?? false),
             reloadOnRevoke: (bool) ($config['banner']['reload_on_revoke'] ?? false),
             cookieName: (string) ($config['cookie']['name'] ?? 'cc_consent'),

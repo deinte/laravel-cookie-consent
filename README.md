@@ -41,8 +41,9 @@ are published to override them, assets only for `script_delivery => 'asset'`.
   cacheable and CSP-friendlier. Publish `cookie-consent-assets` first, and
   re-publish it whenever the package is updated.
 
-The critical CSS (`cookie-consent.min.css`) is always inlined as `<style id="cc-css">`,
-in both modes.
+The stylesheet follows the same mode: `inline` embeds it as `<style id="cc-css">`,
+`asset` links `asset('vendor/cookie-consent/cookie-consent.min.css')` as
+`<link rel="stylesheet" id="cc-css">`.
 
 ## Usage
 
@@ -167,6 +168,7 @@ Every key in `config/cookie-consent.php`:
 | `logging.enabled` | Record every decision as proof of consent. When off the endpoint returns `204` without writing. |
 | `logging.route_prefix` | Prefix of the route registered by `CookieConsent::routes()` (`{prefix}/log`). |
 | `logging.route_name` | Route name; also how the runtime endpoint URL is resolved. |
+| `logging.endpoint` | Explicit URL the runtime posts decisions to. Override when the host exposes the log route under another URL, e.g. behind a proxy prefix. `null` (default) derives it from the named route. |
 | `logging.throttle` | Rate limiter string applied to the endpoint, e.g. `30,1`. |
 | `logging.retention_days` | Default age cutoff for `cookie-consent:prune-logs`. |
 | `logging.ip_salt` | Salt mixed into the IP hash (`COOKIE_CONSENT_IP_SALT`). Falls back to `config('app.key')`. |
@@ -175,7 +177,7 @@ Every key in `config/cookie-consent.php`:
 | `script_repository` | `ScriptRepository` implementation; defaults to `EloquentScriptRepository`. |
 | `settings_resolver` | `SettingsResolver` implementation; defaults to `ConfigSettingsResolver`. |
 | `text_provider` | `TextProvider` implementation; defaults to `TranslationTextProvider` (reads `cookie-consent::banner`). |
-| `script_delivery` | `inline` or `asset` — see [Publishing](#publishing). |
+| `script_delivery` | `inline` or `asset` — applies to both the runtime script and the stylesheet, see [Publishing](#publishing). |
 
 ## Managed scripts table
 
@@ -326,8 +328,9 @@ gtag('consent', 'default', {
 });
 ```
 
-Each decision (and a valid stored decision on load) pushes an `update` with this
-mapping:
+Each decision pushes an `update` with this mapping. A stored decision found on
+load always pushes one too — including a stored "reject all", which is signalled
+explicitly as denied rather than left to the defaults:
 
 | Category | Consent Mode signals |
 |---|---|
@@ -384,8 +387,9 @@ Events on `document`: `cookieconsent:ready`, `cookieconsent:changed`,
 `data-cookieconsent="show"` opens the preferences modal.
 
 Google Consent Mode v2: defaults are pushed as `denied` before any Google tag
-loads, `update` follows each decision and a `cookie_consent_update` dataLayer
-event (`cc_statistics`, `cc_marketing`, …) is available as a GTM trigger.
+loads, an `update` follows each decision and every stored decision on load
+(a stored "reject all" included), and a `cookie_consent_update` dataLayer event
+(`cc_statistics`, `cc_marketing`, …) is available as a GTM trigger.
 
 ## Customising
 

@@ -21,7 +21,7 @@ return new class extends Migration
             $table->text('code')->nullable();
             $table->json('script_attributes')->nullable();
             $table->json('cookies')->nullable();
-            $table->unsignedInteger('sort_order')->default(0);
+            $table->integer('sort_order')->default(0);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });

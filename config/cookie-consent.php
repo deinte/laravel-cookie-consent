@@ -136,6 +136,12 @@ return [
         'route_name' => 'cookieConsent.log',
 
         /*
+         * Override when the host exposes the log route under another URL, for
+         * example behind a proxy prefix. `null` derives it from the named route.
+         */
+        'endpoint' => null,
+
+        /*
          * Throttle applied to the log endpoint (Laravel rate limiter syntax).
          */
         'throttle' => '30,1',
@@ -170,9 +176,10 @@ return [
     'text_provider' => TranslationTextProvider::class,
 
     /*
-     * How the runtime JavaScript is delivered: "inline" embeds the minified
-     * bundle in <head> (no extra request, blocks before any tracker), "asset"
-     * links the published file from public/vendor/cookie-consent.
+     * How the runtime JavaScript and stylesheet are delivered: "inline" embeds
+     * the minified bundle and CSS in <head> (no extra request, blocks before any
+     * tracker), "asset" links both published files from
+     * public/vendor/cookie-consent.
      */
     'script_delivery' => 'inline',
 ];

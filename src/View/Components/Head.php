@@ -31,7 +31,8 @@ class Head extends Component
             'scripts' => $this->manager->scripts(ScriptPosition::Head),
             'runtime' => $delivery === 'inline' ? $this->manager->runtimeScript() : null,
             'runtimeUrl' => $delivery === 'inline' ? null : asset('vendor/cookie-consent/cookie-consent.min.js'),
-            'styles' => $this->manager->runtimeStyles(),
+            'styles' => $delivery === 'inline' ? $this->manager->runtimeStyles() : null,
+            'stylesUrl' => $delivery === 'inline' ? null : asset('vendor/cookie-consent/cookie-consent.min.css'),
         ]);
     }
 }
