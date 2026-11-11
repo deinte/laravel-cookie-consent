@@ -1,0 +1,2 @@
+providers:
+  - Deinte\CookieConsent\CookieConsentServiceProvider
